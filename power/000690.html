@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宝新能源（000690）核心指标走势</title>
+<script src="../assets/echarts.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; }
+  h1 { font-size: 20px; color: #1f2d3d; margin: 0 0 4px; }
+  .sub { color: #6b7a8d; font-size: 13px; margin-bottom: 12px; }
+  .switcher { margin-bottom: 12px; }
+  .switcher button { border:1px solid #c8ced8; background:#fff; color:#4a5568; padding:6px 14px; font-size:13px; cursor:pointer; margin-right:8px; border-radius:4px; }
+  .switcher button.active { background:#2f80ed; border-color:#2f80ed; color:#fff; }
+  #chart { width:100%; height:720px; background:#fff; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.08); }
+  .note { margin-top:16px; color:#8a94a6; font-size:12px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>宝新能源（000690）核心指标走势</h1>
+  <div class="sub">市值 · 市盈率 · 市净率 · 分红 —— 鼠标悬停查看数值，底部滑块缩放时间轴</div>
+  <div class="switcher"><button id="btnPlay">▶ 动态演示</button></div>
+  <div id="legendBox" style="display:flex;flex-wrap:wrap;gap:2px 16px;margin-bottom:12px;"></div>
+  <div id="chart"></div>
+  <div class="note" id="noteBox">说明：① 归一化指数视图以 <b>1997-03-31</b> 为统一基期（=100），各指标同轴对比，上方勾选框可控制显隐；② 财务交易指标（总市值、市盈率、市净率）为季度频率，数据来自腾讯行情/东方财富：总市值=季度末收盘价×总股本，市净率=收盘价÷每股净资产，市盈率=收盘价÷滚动12个月EPS(TTM)；③ 「还原分红市值」（深蓝虚线）= 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算），反映若不除息的股东总回报；</div>
+</div>
+
+<script>
+const chart = echarts.init(document.getElementById('chart'));
+const BASE_DATE = '1997-03-31';
+const TOTAL_SHARES = 2175887862;
+
+const marketCap = [
+  ['1997-03-31', 477.39],
+  ['1997-06-30', 653.42],
+  ['1997-09-30', 271.12],
+  ['1997-12-31', 349.01],
+  ['1998-03-31', 303.1],
+  ['1998-06-30', 316.59],
+  ['1998-09-30', 282.0],
+  ['1998-12-31', 261.11],
+  ['1999-03-31', 250.44],
+  ['1999-06-30', 417.99],
+  ['1999-09-30', 343.57],
+  ['1999-12-31', 315.07],
+  ['2000-03-31', 537.01],
+  ['2000-06-30', 594.02],
+  ['2000-09-30', 345.97],
+  ['2000-12-31', 329.65],
+  ['2001-03-31', 358.15],
+  ['2001-06-30', 371.64],
+  ['2001-09-30', 325.51],
+  ['2001-12-31', 323.99],
+  ['2002-03-31', 325.73],
+  ['2002-06-30', 234.13],
+  ['2002-09-30', 213.67],
+  ['2002-12-31', 154.49],
+  ['2003-03-31', 182.56],
+  ['2003-06-30', 164.5],
+  ['2003-09-30', 124.03],
+  ['2003-12-31', 128.38],
+  ['2004-03-31', 161.02],
+  ['2004-06-30', 120.33],
+  ['2004-09-30', 120.76],
+  ['2004-12-31', 109.66],
+  ['2005-03-31', 104.01],
+  ['2005-06-30', 91.82],
+  ['2005-09-30', 120.54],
+  ['2005-12-31', 120.11],
+  ['2006-03-31', 101.4],
+  ['2006-06-30', 224.33],
+  ['2006-09-30', 209.97],
+  ['2006-12-31', 313.11],
+  ['2007-03-31', 363.16],
+  ['2007-06-30', 342.92],
+  ['2007-09-30', 554.2],
+  ['2007-12-31', 522.21],
+  ['2008-03-31', 275.25],
+  ['2008-06-30', 213.67],
+  ['2008-09-30', 143.61],
+  ['2008-12-31', 135.99],
+  ['2009-03-31', 203.66],
+  ['2009-06-30', 185.17],
+  ['2009-09-30', 179.08],
+  ['2009-12-31', 210.19],
+  ['2010-03-31', 162.32],
+  ['2010-06-30', 109.66],
+  ['2010-09-30', 128.16],
+  ['2010-12-31', 120.33],
+  ['2011-03-31', 122.28],
+  ['2011-06-30', 109.23],
+  ['2011-09-30', 88.34],
+  ['2011-12-31', 66.36],
+  ['2012-03-31', 69.63],
+  ['2012-06-30', 95.52],
+  ['2012-09-30', 87.04],
+  ['2012-12-31', 97.48],
+  ['2013-03-31', 107.71],
+  ['2013-06-30', 101.61],
+  ['2013-09-30', 104.88],
+  ['2013-12-31', 115.32],
+  ['2014-03-31', 100.31],
+  ['2014-06-30', 88.78],
+  ['2014-09-30', 107.71],
+  ['2014-12-31', 137.52],
+  ['2015-03-31', 170.37],
+  ['2015-06-30', 275.25],
+  ['2015-09-30', 153.4],
+  ['2015-12-31', 212.8],
+  ['2016-03-31', 178.21],
+  ['2016-06-30', 147.53],
+  ['2016-09-30', 174.07],
+  ['2016-12-31', 201.7],
+  ['2017-03-31', 195.83],
+  ['2017-06-30', 130.12],
+  ['2017-09-30', 173.2],
+  ['2017-12-31', 174.07],
+  ['2018-03-31', 178.64],
+  ['2018-06-30', 151.44],
+  ['2018-09-30', 156.66],
+  ['2018-12-31', 146.44],
+  ['2019-03-31', 177.99],
+  ['2019-06-30', 140.13],
+  ['2019-09-30', 134.47],
+  ['2019-12-31', 122.94],
+  ['2020-03-31', 113.15],
+  ['2020-06-30', 102.7],
+  ['2020-09-30', 139.26],
+  ['2020-12-31', 158.84],
+  ['2021-03-31', 151.22],
+  ['2021-06-30', 111.19],
+  ['2021-09-30', 148.18],
+  ['2021-12-31', 128.81],
+  ['2022-03-31', 105.31],
+  ['2022-06-30', 95.3],
+  ['2022-09-30', 102.7],
+  ['2022-12-31', 141.43],
+  ['2023-03-31', 131.64],
+  ['2023-06-30', 152.75],
+  ['2023-09-30', 117.28],
+  ['2023-12-31', 96.39],
+  ['2024-03-31', 109.66],
+  ['2024-06-30', 110.97],
+  ['2024-09-30', 106.62],
+  ['2024-12-31', 97.48],
+  ['2025-03-31', 89.65],
+  ['2025-06-30', 99.0],
+  ['2025-09-30', 100.53],
+  ['2025-12-31', 91.17],
+  ['2026-03-31', 107.27],
+  ['2026-06-30', 102.27],
+  ['2026-08-28', 106.62],
+];
+const pe = [
+  ['1997-03-31', null],
+  ['1997-06-30', null],
+  ['1997-09-30', null],
+  ['1997-12-31', null],
+  ['1998-03-31', null],
+  ['1998-06-30', null],
+  ['1998-09-30', null],
+  ['1998-12-31', null],
+  ['1999-03-31', null],
+  ['1999-06-30', null],
+  ['1999-09-30', null],
+  ['1999-12-31', null],
+  ['2000-03-31', null],
+  ['2000-06-30', null],
+  ['2000-09-30', null],
+  ['2000-12-31', null],
+  ['2001-03-31', null],
+  ['2001-06-30', null],
+  ['2001-09-30', null],
+  ['2001-12-31', null],
+  ['2002-03-31', null],
+  ['2002-06-30', null],
+  ['2002-09-30', null],
+  ['2002-12-31', null],
+  ['2003-03-31', null],
+  ['2003-06-30', null],
+  ['2003-09-30', null],
+  ['2003-12-31', null],
+  ['2004-03-31', null],
+  ['2004-06-30', null],
+  ['2004-09-30', null],
+  ['2004-12-31', null],
+  ['2005-03-31', null],
+  ['2005-06-30', null],
+  ['2005-09-30', null],
+  ['2005-12-31', null],
+  ['2006-03-31', null],
+  ['2006-06-30', null],
+  ['2006-09-30', null],
+  ['2006-12-31', 15.01],
+  ['2007-03-31', 17.85],
+  ['2007-06-30', 22.56],
+  ['2007-09-30', 39.89],
+  ['2007-12-31', 80.62],
+  ['2008-03-31', 46.39],
+  ['2008-06-30', 24.96],
+  ['2008-09-30', 30.32],
+  ['2008-12-31', 19.55],
+  ['2009-03-31', 33.62],
+  ['2009-06-30', 41.72],
+  ['2009-09-30', 29.42],
+  ['2009-12-31', 29.27],
+  ['2010-03-31', 28.69],
+  ['2010-06-30', 22.91],
+  ['2010-09-30', 32.72],
+  ['2010-12-31', 29.11],
+  ['2011-03-31', 31.22],
+  ['2011-06-30', 26.42],
+  ['2011-09-30', 25.37],
+  ['2011-12-31', 30.5],
+  ['2012-03-31', 35.56],
+  ['2012-06-30', 36.58],
+  ['2012-09-30', 23.53],
+  ['2012-12-31', 17.23],
+  ['2013-03-31', 12.07],
+  ['2013-06-30', 9.73],
+  ['2013-09-30', 7.53],
+  ['2013-12-31', 8.28],
+  ['2014-03-31', 7.2],
+  ['2014-06-30', 6.38],
+  ['2014-09-30', 8.53],
+  ['2014-12-31', 10.71],
+  ['2015-03-31', 15.35],
+  ['2015-06-30', 25.3],
+  ['2015-09-30', 17.62],
+  ['2015-12-31', 26.43],
+  ['2016-03-31', 22.14],
+  ['2016-06-30', 18.83],
+  ['2016-09-30', 22.22],
+  ['2016-12-31', 28.09],
+  ['2017-03-31', 36.0],
+  ['2017-06-30', 24.92],
+  ['2017-09-30', 39.8],
+  ['2017-12-31', 160.0],
+  ['2018-03-31', 117.29],
+  ['2018-06-30', 46.4],
+  ['2018-09-30', 40.0],
+  ['2018-12-31', 32.05],
+  ['2019-03-31', 28.21],
+  ['2019-06-30', 46.0],
+  ['2019-09-30', 41.2],
+  ['2019-12-31', 13.78],
+  ['2020-03-31', 14.44],
+  ['2020-06-30', 8.58],
+  ['2020-09-30', 7.53],
+  ['2020-12-31', 8.69],
+  ['2021-03-31', 8.48],
+  ['2021-06-30', 6.01],
+  ['2021-09-30', 12.16],
+  ['2021-12-31', 15.58],
+  ['2022-03-31', 14.16],
+  ['2022-06-30', 52.14],
+  ['2022-09-30', 54.0],
+  ['2022-12-31', 81.25],
+  ['2023-03-31', 67.15],
+  ['2023-06-30', 32.5],
+  ['2023-09-30', 18.64],
+  ['2023-12-31', 10.8],
+  ['2024-03-31', 10.24],
+  ['2024-06-30', 11.59],
+  ['2024-09-30', 12.78],
+  ['2024-12-31', 14.0],
+  ['2025-03-31', 11.26],
+  ['2025-06-30', 11.1],
+  ['2025-09-30', 10.74],
+  ['2025-12-31', 8.91],
+  ['2026-03-31', 10.49],
+  ['2026-06-30', 9.4],
+  ['2026-08-28', 9.8],
+];
+const pb = [
+  ['1997-03-31', null],
+  ['1997-06-30', 7.2],
+  ['1997-09-30', null],
+  ['1997-12-31', 7.05],
+  ['1998-03-31', null],
+  ['1998-06-30', 6.01],
+  ['1998-09-30', null],
+  ['1998-12-31', 4.8],
+  ['1999-03-31', null],
+  ['1999-06-30', 7.33],
+  ['1999-09-30', null],
+  ['1999-12-31', 4.71],
+  ['2000-03-31', null],
+  ['2000-06-30', 8.69],
+  ['2000-09-30', null],
+  ['2000-12-31', 8.91],
+  ['2001-03-31', null],
+  ['2001-06-30', 9.49],
+  ['2001-09-30', null],
+  ['2001-12-31', 8.97],
+  ['2002-03-31', 8.75],
+  ['2002-06-30', 6.18],
+  ['2002-09-30', 5.52],
+  ['2002-12-31', 4.15],
+  ['2003-03-31', 4.79],
+  ['2003-06-30', 4.27],
+  ['2003-09-30', 3.15],
+  ['2003-12-31', 2.72],
+  ['2004-03-31', 3.35],
+  ['2004-06-30', 2.58],
+  ['2004-09-30', 2.56],
+  ['2004-12-31', 2.21],
+  ['2005-03-31', 2.23],
+  ['2005-06-30', 1.95],
+  ['2005-09-30', 2.48],
+  ['2005-12-31', 2.23],
+  ['2006-03-31', 2.24],
+  ['2006-06-30', 4.41],
+  ['2006-09-30', 3.73],
+  ['2006-12-31', 3.19],
+  ['2007-03-31', 6.35],
+  ['2007-06-30', 5.02],
+  ['2007-09-30', 5.57],
+  ['2007-12-31', 6.54],
+  ['2008-03-31', 5.75],
+  ['2008-06-30', 4.63],
+  ['2008-09-30', 3.1],
+  ['2008-12-31', 2.93],
+  ['2009-03-31', 4.18],
+  ['2009-06-30', 3.52],
+  ['2009-09-30', 3.31],
+  ['2009-12-31', 3.74],
+  ['2010-03-31', 4.39],
+  ['2010-06-30', 2.91],
+  ['2010-09-30', 3.31],
+  ['2010-12-31', 2.99],
+  ['2011-03-31', 2.99],
+  ['2011-06-30', 2.67],
+  ['2011-09-30', 2.13],
+  ['2011-12-31', 1.59],
+  ['2012-03-31', 1.66],
+  ['2012-06-30', 2.25],
+  ['2012-09-30', 1.98],
+  ['2012-12-31', 2.02],
+  ['2013-03-31', 2.25],
+  ['2013-06-30', 2.04],
+  ['2013-09-30', 1.9],
+  ['2013-12-31', 2.0],
+  ['2014-03-31', 1.86],
+  ['2014-06-30', 1.56],
+  ['2014-09-30', 1.77],
+  ['2014-12-31', 2.18],
+  ['2015-03-31', 2.9],
+  ['2015-06-30', 4.45],
+  ['2015-09-30', 2.55],
+  ['2015-12-31', 3.34],
+  ['2016-03-31', 2.72],
+  ['2016-06-30', 1.85],
+  ['2016-09-30', 2.14],
+  ['2016-12-31', 2.45],
+  ['2017-03-31', 2.37],
+  ['2017-06-30', 1.54],
+  ['2017-09-30', 2.04],
+  ['2017-12-31', 2.05],
+  ['2018-03-31', 2.1],
+  ['2018-06-30', 1.71],
+  ['2018-09-30', 1.75],
+  ['2018-12-31', 1.65],
+  ['2019-03-31', 1.96],
+  ['2019-06-30', 1.57],
+  ['2019-09-30', 1.48],
+  ['2019-12-31', 1.29],
+  ['2020-03-31', 1.18],
+  ['2020-06-30', 1.06],
+  ['2020-09-30', 1.33],
+  ['2020-12-31', 1.46],
+  ['2021-03-31', 1.46],
+  ['2021-06-30', 1.02],
+  ['2021-09-30', 1.34],
+  ['2021-12-31', 1.15],
+  ['2022-03-31', 0.94],
+  ['2022-06-30', 0.86],
+  ['2022-09-30', 0.91],
+  ['2022-12-31', 1.25],
+  ['2023-03-31', 1.16],
+  ['2023-06-30', 1.32],
+  ['2023-09-30', 0.99],
+  ['2023-12-31', 0.79],
+  ['2024-03-31', 0.89],
+  ['2024-06-30', 0.94],
+  ['2024-09-30', 0.88],
+  ['2024-12-31', 0.8],
+  ['2025-03-31', 0.72],
+  ['2025-06-30', 0.8],
+  ['2025-09-30', 0.8],
+  ['2025-12-31', 0.71],
+  ['2026-03-31', 0.82],
+  ['2026-06-30', 0.79],
+  ['2026-08-28', 0.82],
+];
+const dividendPerShare = [
+  ['1998-12-31', 0.1],
+  ['1999-12-31', 0.2],
+  ['2000-12-31', 0.275],
+  ['2001-12-31', 0.2],
+  ['2002-12-31', 0.15],
+  ['2003-12-31', 0.12],
+  ['2004-12-31', 0.2],
+  ['2005-12-31', 0.04],
+  ['2006-12-31', 0.03],
+  ['2007-12-31', 0.03],
+  ['2008-12-31', 0.06],
+  ['2009-12-31', 0.1],
+  ['2010-12-31', 0.03],
+  ['2011-12-31', 0.055],
+  ['2012-12-31', 0.15],
+  ['2013-12-31', 0.3],
+  ['2014-12-31', 0.3],
+  ['2015-12-31', 0.2],
+  ['2016-12-31', 0.033],
+  ['2017-12-31', 0.03],
+  ['2018-12-31', 0.1],
+  ['2019-12-31', 0.2],
+  ['2020-12-31', 0.3],
+  ['2021-12-31', 0.05],
+  ['2022-12-31', 0.03],
+  ['2023-12-31', 0.3],
+  ['2024-12-31', 0.15],
+  ['2025-12-31', 0.25],
+];
+
+// 还原分红市值 = 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算）
+const mcRestored = (function () {
+  const events = dividendPerShare
+    .map(p => ({ date: (Number(p[0].slice(0,4)) + 1) + '-06-30', total: p[1] * TOTAL_SHARES / 1e8 }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  let cum = 0, idx = 0;
+  return marketCap.map(([date, mc]) => {
+    while (idx < events.length && events[idx].date <= date) { cum += events[idx].total; idx++; }
+    return [date, +(mc + cum).toFixed(2)];
+  });
+})();
+
+
+
+const colors = ["#e74c3c", "#2f80ed", "#9b59b6", "#27ae60", "#e67e22", "#f39c12", "#e84393", "#1a5276", "#00acc1", "#c0392b", "#6c3483", "#0e6655", "#b7950b", "#5d6d7e", "#d35400"];
+
+function fmt(v) { return Number.isFinite(v) ? v.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : String(v); }
+function baseValue(data, baseDate) {
+  let last = null;
+  for (const d of data) { if (d[0] <= baseDate) last = d[1]; else break; }
+  return last !== null ? last : data[0][1];
+}
+function normLine(extra) {
+  return Object.assign({ type:'line', smooth:true, showSymbol:true, symbolSize:6, lineStyle:{ width:2.2 }, emphasis:{ focus:'series' } }, extra || {});
+}
+
+const normDefs = [
+  { name: '总市值', data: marketCap, color: colors[1], baseRef: marketCap },
+  { name: '还原分红市值', data: mcRestored, color: colors[7], dashed: true, baseRef: marketCap },
+  { name: '市盈率PE', data: pe, color: colors[2] },
+  { name: '市净率PB', data: pb, color: colors[3] },
+  { name: '每股股利', data: dividendPerShare, color: colors[4] },
+];
+
+const selectedState = {};
+normDefs.forEach(d => { selectedState[d.name] = true; });
+
+const masterDates = [...new Set(normDefs.flatMap(d => d.data.map(p => p[0])))].sort();
+const timeMin = masterDates[0], timeMax = masterDates[masterDates.length - 1];
+
+function buildNormOption() {
+  const series = normDefs.map(d => {
+    const base = baseValue(d.baseRef || d.data, BASE_DATE);
+    const data = d.data.map(p => ({ value: [p[0], +(p[1] / base * 100).toFixed(2)], raw: p[1], base }));
+    return normLine({ name: d.name, data, lineStyle: { width:2.2, color:d.color, type:d.dashed?'dashed':'solid' }, itemStyle: { color:d.color } });
+  });
+  return {
+    color: colors,
+    legend: { show:false, selected:selectedState },
+    tooltip: {
+      trigger:'axis', axisPointer:{ type:'line' },
+      backgroundColor:'rgba(30,40,55,.92)', borderWidth:0, textStyle:{ color:'#fff', fontSize:12 },
+      formatter: function (params) {
+        let s = '<b>' + params[0].axisValueLabel + '</b>';
+        params.forEach(it => { s += '<br/>' + it.marker + it.seriesName + '：' + fmt(it.data.raw) + '　<span style="opacity:.65">(指数 ' + it.value[1] + ')</span>'; });
+        return s;
+      }
+    },
+    grid: { left:60, right:40, top:44, bottom:70 },
+    xAxis: { type:'time', min:timeMin, max:timeMax, axisLine:{ lineStyle:{ color:'#c8ced8' } }, axisLabel:{ color:'#6b7a8d', fontSize:11 }, axisTick:{ show:false }, splitLine:{ show:false } },
+    yAxis: { type:'value', name:'指数\n(基期=100)', nameTextStyle:{ color:'#6b7a8d', fontSize:11, align:'left' }, axisLabel:{ color:'#6b7a8d', fontSize:11 }, axisLine:{ show:false }, axisTick:{ show:false }, splitLine:{ lineStyle:{ color:'#eef0f5' } } },
+    dataZoom: [ { type:'inside', start:0, end:100 }, { type:'slider', bottom:8, height:22, borderColor:'#d5dbe5', backgroundColor:'#eef0f5', fillerColor:'rgba(47,128,237,.15)', handleStyle:{ color:'#2f80ed' } } ],
+    series
+  };
+}
+
+chart.setOption(buildNormOption());
+window.addEventListener('resize', () => chart.resize());
+
+// 显隐勾选框
+const legendBox = document.getElementById('legendBox');
+normDefs.forEach(d => {
+  const label = document.createElement('label');
+  label.style.cssText = 'display:inline-flex;align-items:center;font-size:13px;color:#4a5568;cursor:pointer;';
+  const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.style.cssText='margin-right:4px;cursor:pointer;';
+  // 图例标记：与图中一致——实线/虚线 + 中间圆点，颜色随指标
+  const mk = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  mk.setAttribute('width', '22'); mk.setAttribute('height', '12');
+  mk.style.cssText = 'margin-right:5px;vertical-align:middle;flex:none;';
+  const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  ln.setAttribute('x1', '1'); ln.setAttribute('y1', '6');
+  ln.setAttribute('x2', '21'); ln.setAttribute('y2', '6');
+  ln.setAttribute('stroke', d.color); ln.setAttribute('stroke-width', '2');
+  if (d.dashed) ln.setAttribute('stroke-dasharray', '4 3');
+  const pt = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  pt.setAttribute('cx', '11'); pt.setAttribute('cy', '6');
+  pt.setAttribute('r', '3'); pt.setAttribute('fill', d.color);
+  mk.appendChild(ln); mk.appendChild(pt);
+  label.appendChild(cb); label.appendChild(mk); label.appendChild(document.createTextNode(d.name));
+  legendBox.appendChild(label);
+  cb.onchange = () => { selectedState[d.name] = cb.checked; chart.setOption({ legend: { selected: selectedState } }); };
+});
+
+// 动态演示
+let playTimer = null, frame = 0;
+function seriesAtDate(limitDate) {
+  return normDefs.map(d => {
+    const base = baseValue(d.baseRef || d.data, BASE_DATE);
+    const sliced = d.data.filter(p => p[0] <= limitDate);
+    const data = sliced.map(p => ({ value: [p[0], +(p[1]/base*100).toFixed(2)], raw: p[1], base }));
+    return normLine({ name:d.name, data, lineStyle:{ width:2.2, color:d.color, type:d.dashed?'dashed':'solid' }, itemStyle:{ color:d.color } });
+  });
+}
+const btnPlay = document.getElementById('btnPlay');
+btnPlay.onclick = function () {
+  if (playTimer) { clearInterval(playTimer); playTimer=null; this.textContent='▶ 动态演示'; chart.setOption(buildNormOption(), true); return; }
+  frame = 0; this.textContent = '⏸ 停止';
+  chart.setOption({ series: seriesAtDate(masterDates[0]) });
+  playTimer = setInterval(() => {
+    frame++;
+    if (frame >= masterDates.length) { clearInterval(playTimer); playTimer=null; btnPlay.textContent='▶ 动态演示'; chart.setOption(buildNormOption(), true); return; }
+    chart.setOption({ series: seriesAtDate(masterDates[frame]) });
+  }, 120);
+};
+</script>
+</body>
+</html>
