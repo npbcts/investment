@@ -509,8 +509,9 @@ const normDefs = [
   { name: '每股股利', data: dividendPerShare, color: colors[4] },
 ];
 
+const DEFAULT_ON = new Set(['总市值', '还原分红市值']);
 const selectedState = {};
-normDefs.forEach(d => { selectedState[d.name] = true; });
+normDefs.forEach(d => { selectedState[d.name] = DEFAULT_ON.has(d.name); });
 
 const masterDates = [...new Set(normDefs.flatMap(d => d.data.map(p => p[0])))].sort();
 const timeMin = masterDates[0], timeMax = masterDates[masterDates.length - 1];
