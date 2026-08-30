@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国核电（601985）核心指标走势</title>
+<script src="assets/echarts.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; }
+  h1 { font-size: 20px; color: #1f2d3d; margin: 0 0 4px; }
+  .sub { color: #6b7a8d; font-size: 13px; margin-bottom: 12px; }
+  .switcher { margin-bottom: 12px; }
+  .switcher button { border:1px solid #c8ced8; background:#fff; color:#4a5568; padding:6px 14px; font-size:13px; cursor:pointer; margin-right:8px; border-radius:4px; }
+  .switcher button.active { background:#2f80ed; border-color:#2f80ed; color:#fff; }
+  #chart { width:100%; height:720px; background:#fff; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.08); }
+  .note { margin-top:16px; color:#8a94a6; font-size:12px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>中国核电（601985）核心指标走势</h1>
+  <div class="sub">市值 · 市盈率 · 市净率 · 分红 · 反应堆规模 —— 鼠标悬停查看数值，底部滑块缩放时间轴</div>
+  <div class="switcher"><button id="btnPlay">▶ 动态演示</button></div>
+  <div id="legendBox" style="display:flex;flex-wrap:wrap;gap:2px 16px;margin-bottom:12px;"></div>
+  <div id="chart"></div>
+  <div class="note" id="noteBox">说明：① 归一化指数视图以 <b>2015-12-31</b> 为统一基期（=100），各指标同轴对比，上方勾选框可控制显隐；② 财务交易指标（总市值、市盈率、市净率）为季度频率，数据来自腾讯行情/东方财富：总市值=季度末收盘价×总股本，市净率=收盘价÷每股净资产，市盈率=收盘价÷滚动12个月EPS(TTM)；③ 「还原分红市值」（深蓝虚线）= 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算），反映若不除息的股东总回报；④ 反应堆规模（在运/在建机组、装机容量万千瓦）为<b>基于公开披露信息的整理/估算值</b>，装机容量由台数×平均单机容量反推，逐年精确值需核实；⑤ 估值密度指标（基于<b>分红前估值</b>=还原分红市值，平均=近4季滚动平均）：「市值/在运万千瓦」= 单千瓦在运装机对应估值（亿元/万千瓦）；「平均市值/总规模万千瓦」= 近4季平均分红前估值 ÷ 在建+在运万千瓦；「地板估值」= 历史最低「单千瓦总规模估值」× 当期总规模万千瓦，得保守下沿；「天花板估值」= 历史最高「单千瓦总规模估值」× 当期总规模万千瓦，得乐观上沿（含 IPO 高溢价期），两者共同框定历史估值区间上下沿，与总市值、分红前估值构成层次分布。</div>
+</div>
+
+<script>
+const chart = echarts.init(document.getElementById('chart'));
+const BASE_DATE = '2015-12-31';
+const TOTAL_SHARES = 18883284867;
+
+const marketCap = [
+  ['2015-06-30', 2468.05],
+  ['2015-09-30', 1712.71],
+  ['2015-12-31', 1801.47],
+  ['2016-03-31', 1457.79],
+  ['2016-06-30', 1289.73],
+  ['2016-09-30', 1253.85],
+  ['2016-12-31', 1333.16],
+  ['2017-03-31', 1370.93],
+  ['2017-06-30', 1474.78],
+  ['2017-09-30', 1408.69],
+  ['2017-12-31', 1387.92],
+  ['2018-03-31', 1268.96],
+  ['2018-06-30', 1066.91],
+  ['2018-09-30', 1134.89],
+  ['2018-12-31', 995.15],
+  ['2019-03-31', 1142.44],
+  ['2019-06-30', 1049.91],
+  ['2019-09-30', 998.93],
+  ['2019-12-31', 944.16],
+  ['2020-03-31', 830.86],
+  ['2020-06-30', 772.33],
+  ['2020-09-30', 828.98],
+  ['2020-12-31', 929.06],
+  ['2021-03-31', 1038.58],
+  ['2021-06-30', 955.49],
+  ['2021-09-30', 1361.48],
+  ['2021-12-31', 1567.31],
+  ['2022-03-31', 1531.43],
+  ['2022-06-30', 1295.39],
+  ['2022-09-30', 1104.67],
+  ['2022-12-31', 1133.0],
+  ['2023-03-31', 1206.64],
+  ['2023-06-30', 1331.27],
+  ['2023-09-30', 1378.48],
+  ['2023-12-31', 1416.25],
+  ['2024-03-31', 1735.37],
+  ['2024-06-30', 2012.96],
+  ['2024-09-30', 2105.49],
+  ['2024-12-31', 1969.53],
+  ['2025-03-31', 1739.15],
+  ['2025-06-30', 1759.92],
+  ['2025-09-30', 1644.73],
+  ['2025-12-31', 1633.4],
+  ['2026-03-31', 1708.94],
+  ['2026-06-30', 1705.16],
+  ['2026-08-28', 1684.39],
+];
+const pe = [
+  ['2015-06-30', 37.56],
+  ['2015-09-30', 26.21],
+  ['2015-12-31', 34.32],
+  ['2016-03-31', 31.64],
+  ['2016-06-30', 30.22],
+  ['2016-09-30', 26.77],
+  ['2016-12-31', 24.51],
+  ['2017-03-31', 24.04],
+  ['2017-06-30', 26.66],
+  ['2017-09-30', 23.91],
+  ['2017-12-31', 25.26],
+  ['2018-03-31', 23.17],
+  ['2018-06-30', 19.35],
+  ['2018-09-30', 22.18],
+  ['2018-12-31', 17.34],
+  ['2019-03-31', 19.21],
+  ['2019-06-30', 18.23],
+  ['2019-09-30', 17.81],
+  ['2019-12-31', 16.34],
+  ['2020-03-31', 15.44],
+  ['2020-06-30', 12.17],
+  ['2020-09-30', 11.23],
+  ['2020-12-31', 12.98],
+  ['2021-03-31', 13.16],
+  ['2021-06-30', 11.58],
+  ['2021-09-30', 17.0],
+  ['2021-12-31', 18.44],
+  ['2022-03-31', 16.12],
+  ['2022-06-30', 14.17],
+  ['2022-09-30', 11.58],
+  ['2022-12-31', 12.82],
+  ['2023-03-31', 13.74],
+  ['2023-06-30', 14.3],
+  ['2023-09-30', 13.72],
+  ['2023-12-31', 13.54],
+  ['2024-03-31', 16.44],
+  ['2024-06-30', 19.35],
+  ['2024-09-30', 20.65],
+  ['2024-12-31', 22.53],
+  ['2025-03-31', 20.33],
+  ['2025-06-30', 21.83],
+  ['2025-09-30', 22.92],
+  ['2025-12-31', 19.09],
+  ['2026-03-31', 22.57],
+  ['2026-06-30', 25.44],
+  ['2026-08-28', 25.13],
+];
+const pb = [
+  ['2015-06-30', 5.6],
+  ['2015-09-30', 3.78],
+  ['2015-12-31', 3.95],
+  ['2016-03-31', 3.11],
+  ['2016-06-30', 2.65],
+  ['2016-09-30', 2.59],
+  ['2016-12-31', 2.7],
+  ['2017-03-31', 2.7],
+  ['2017-06-30', 2.93],
+  ['2017-09-30', 2.69],
+  ['2017-12-31', 2.63],
+  ['2018-03-31', 2.35],
+  ['2018-06-30', 1.99],
+  ['2018-09-30', 2.05],
+  ['2018-12-31', 1.77],
+  ['2019-03-31', 1.97],
+  ['2019-06-30', 1.84],
+  ['2019-09-30', 1.71],
+  ['2019-12-31', 1.59],
+  ['2020-03-31', 1.37],
+  ['2020-06-30', 1.27],
+  ['2020-09-30', 1.31],
+  ['2020-12-31', 1.42],
+  ['2021-03-31', 1.55],
+  ['2021-06-30', 1.42],
+  ['2021-09-30', 1.96],
+  ['2021-12-31', 2.2],
+  ['2022-03-31', 1.97],
+  ['2022-06-30', 1.63],
+  ['2022-09-30', 1.35],
+  ['2022-12-31', 1.37],
+  ['2023-03-31', 1.41],
+  ['2023-06-30', 1.55],
+  ['2023-09-30', 1.55],
+  ['2023-12-31', 1.57],
+  ['2024-03-31', 1.86],
+  ['2024-06-30', 2.18],
+  ['2024-09-30', 2.2],
+  ['2024-12-31', 1.96],
+  ['2025-03-31', 1.68],
+  ['2025-06-30', 1.69],
+  ['2025-09-30', 1.55],
+  ['2025-12-31', 1.51],
+  ['2026-03-31', 1.55],
+  ['2026-06-30', 1.57],
+  ['2026-08-28', 1.55],
+];
+const dividendPerShare = [
+  ['2015-12-31', 0.09],
+  ['2016-12-31', 0.11],
+  ['2017-12-31', 0.112],
+  ['2018-12-31', 0.12],
+  ['2019-12-31', 0.122],
+  ['2020-12-31', 0.13],
+  ['2021-12-31', 0.15],
+  ['2022-12-31', 0.17],
+  ['2023-12-31', 0.195],
+  ['2024-12-31', 0.16],
+  ['2025-12-31', 0.18],
+  ['2026-12-31', 0.02],
+];
+const reactor = [
+  ['2015-12-31', 12],
+  ['2016-12-31', 14],
+  ['2017-12-31', 16],
+  ['2018-12-31', 18],
+  ['2019-12-31', 21],
+  ['2020-12-31', 21],
+  ['2021-12-31', 24],
+  ['2022-12-31', 25],
+  ['2023-12-31', 25],
+  ['2024-12-31', 25],
+  ['2025-12-31', 28],
+  ['2026-06-30', 29],
+];
+const underConstruction = [
+  ['2015-12-31', 9],
+  ['2016-12-31', 10],
+  ['2017-12-31', 9],
+  ['2018-12-31', 8],
+  ['2019-12-31', 5],
+  ['2020-12-31', 4],
+  ['2021-12-31', 6],
+  ['2022-12-31', 7],
+  ['2023-12-31', 9],
+  ['2024-12-31', 12],
+  ['2025-12-31', 12],
+  ['2026-06-30', 12],
+];
+const GW_PER_OP = 95.0, GW_PER_UC = 115.0;
+
+// 还原分红市值 = 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算）
+const mcRestored = (function () {
+  const events = dividendPerShare
+    .map(p => ({ date: (Number(p[0].slice(0,4)) + 1) + '-06-30', total: p[1] * TOTAL_SHARES / 1e8 }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  let cum = 0, idx = 0;
+  return marketCap.map(([date, mc]) => {
+    while (idx < events.length && events[idx].date <= date) { cum += events[idx].total; idx++; }
+    return [date, +(mc + cum).toFixed(2)];
+  });
+})();
+
+const totalUnits = (function () {
+  const am = new Map(reactor), bm = new Map(underConstruction);
+  const dates = [...new Set([...am.keys(), ...bm.keys()])].sort();
+  const out = []; let la = null, lb = null;
+  for (const d of dates) {
+    if (am.has(d)) la = am.get(d);
+    if (bm.has(d)) lb = bm.get(d);
+    if (la !== null && lb !== null) out.push([d, la + lb]);
+  }
+  return out;
+})();
+
+
+const reactorGW = reactor.map(([d, n]) => [d, +(n * GW_PER_OP).toFixed(1)]);
+const underConstructionGW = underConstruction.map(([d, n]) => [d, +(n * GW_PER_UC).toFixed(1)]);
+const totalGW = (function () {
+  const am = new Map(reactorGW), bm = new Map(underConstructionGW);
+  const dates = [...new Set([...am.keys(), ...bm.keys()])].sort();
+  const out = []; let la = null, lb = null;
+  for (const d of dates) {
+    if (am.has(d)) la = am.get(d);
+    if (bm.has(d)) lb = bm.get(d);
+    if (la !== null && lb !== null) out.push([d, +(la + lb).toFixed(1)]);
+  }
+  return out;
+})();
+
+
+// 三项估值密度指标（基于分红前估值 = 还原分红市值 mcRestored，平均 = 近4季滚动平均）
+function ffillAt(date, arr) {
+  let last = null;
+  for (const [d, v] of arr) { if (d <= date) last = v; else break; }
+  return last;
+}
+// 近 4 季滚动平均分红前估值（亿元）
+const mcRollAvg = mcRestored.map(([d, mc], i) => {
+  const w = mcRestored.slice(Math.max(0, i - 3), i + 1);
+  return [d, +(w.reduce((s, p) => s + p[1], 0) / w.length).toFixed(2)];
+});
+// ① 各期分红前估值/在运万千瓦 —— 单千瓦在运估值（亿元/万千瓦）
+const mcPerOpGW = mcRestored.map(([d, mc]) => { const g = ffillAt(d, reactorGW); return g ? [d, +(mc / g).toFixed(3)] : null; }).filter(Boolean);
+// ④ 各期平均分红前估值/(在建+在运万千瓦) —— 单千瓦总规模估值（亿元/万千瓦）
+const mcPerTotalGW = mcRollAvg.map(([d, mc]) => { const g = ffillAt(d, totalGW); return g ? [d, +(mc / g).toFixed(3)] : null; }).filter(Boolean);
+// ② 地板估值 = 历史最低「单千瓦总规模估值」× 当前总规模万千瓦（亿元）
+const floorValuation = (function () {
+  const minRatio = Math.min(...mcPerTotalGW.map(p => p[1]));
+  return mcRestored.map(([d]) => { const g = ffillAt(d, totalGW); return g ? [d, +(minRatio * g).toFixed(2)] : null; }).filter(Boolean);
+})();
+// ③ 天花板估值 = 历史最高「单千瓦总规模估值」× 当前总规模万千瓦（亿元）
+const ceilingValuation = (function () {
+  const maxRatio = Math.max(...mcPerTotalGW.map(p => p[1]));
+  return mcRestored.map(([d]) => { const g = ffillAt(d, totalGW); return g ? [d, +(maxRatio * g).toFixed(2)] : null; }).filter(Boolean);
+})();
+
+const colors = ["#e74c3c", "#2f80ed", "#9b59b6", "#27ae60", "#e67e22", "#f39c12", "#e84393", "#1a5276", "#00acc1", "#c0392b", "#6c3483", "#0e6655", "#b7950b", "#5d6d7e", "#d35400"];
+
+function fmt(v) { return Number.isFinite(v) ? v.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : String(v); }
+function baseValue(data, baseDate) {
+  let last = null;
+  for (const d of data) { if (d[0] <= baseDate) last = d[1]; else break; }
+  return last !== null ? last : data[0][1];
+}
+function normLine(extra) {
+  return Object.assign({ type:'line', smooth:true, showSymbol:true, symbolSize:6, lineStyle:{ width:2.2 }, emphasis:{ focus:'series' } }, extra || {});
+}
+
+const normDefs = [
+  { name: '在运机组(台)', data: reactor, color: colors[0] },
+  { name: '在运装机(万千瓦)', data: reactorGW, color: colors[9], dashed: true },
+  { name: '在运+在建(台)', data: totalUnits, color: colors[6] },
+  { name: '在运+在建装机(万千瓦)', data: totalGW, color: colors[10], dashed: true },
+  { name: '总市值', data: marketCap, color: colors[1], baseRef: marketCap },
+  { name: '还原分红市值', data: mcRestored, color: colors[7], dashed: true, baseRef: marketCap },
+  { name: '市值/在运万千瓦', data: mcPerOpGW, color: colors[11] },
+  { name: '地板估值(最低均单千瓦×总规模)', data: floorValuation, color: colors[12], dashed: true, baseRef: marketCap },
+  { name: '天花板估值(最高均单千瓦×总规模)', data: ceilingValuation, color: colors[14], dashed: true, baseRef: marketCap },
+  { name: '平均市值/总规模万千瓦', data: mcPerTotalGW, color: colors[13], dashed: true },
+  { name: '市盈率PE', data: pe, color: colors[2] },
+  { name: '市净率PB', data: pb, color: colors[3] },
+  { name: '每股股利', data: dividendPerShare, color: colors[4] },
+];
+
+const DEFAULT_ON = new Set(['在运装机(万千瓦)', '在运+在建装机(万千瓦)', '总市值', '还原分红市值']);
+const selectedState = {};
+normDefs.forEach(d => { selectedState[d.name] = DEFAULT_ON.has(d.name); });
+
+const masterDates = [...new Set(normDefs.flatMap(d => d.data.map(p => p[0])))].sort();
+const timeMin = masterDates[0], timeMax = masterDates[masterDates.length - 1];
+
+function buildNormOption() {
+  const series = normDefs.map(d => {
+    const base = baseValue(d.baseRef || d.data, BASE_DATE);
+    const data = d.data.map(p => ({ value: [p[0], +(p[1] / base * 100).toFixed(2)], raw: p[1], base }));
+    return normLine({ name: d.name, data, lineStyle: { width:2.2, color:d.color, type:d.dashed?'dashed':'solid' }, itemStyle: { color:d.color } });
+  });
+  return {
+    color: colors,
+    legend: { show:false, selected:selectedState },
+    tooltip: {
+      trigger:'axis', axisPointer:{ type:'line' },
+      backgroundColor:'rgba(30,40,55,.92)', borderWidth:0, textStyle:{ color:'#fff', fontSize:12 },
+      formatter: function (params) {
+        let s = '<b>' + params[0].axisValueLabel + '</b>';
+        params.forEach(it => { s += '<br/>' + it.marker + it.seriesName + '：' + fmt(it.data.raw) + '　<span style="opacity:.65">(指数 ' + it.value[1] + ')</span>'; });
+        return s;
+      }
+    },
+    grid: { left:60, right:40, top:44, bottom:70 },
+    xAxis: { type:'time', min:timeMin, max:timeMax, axisLine:{ lineStyle:{ color:'#c8ced8' } }, axisLabel:{ color:'#6b7a8d', fontSize:11 }, axisTick:{ show:false }, splitLine:{ show:false } },
+    yAxis: { type:'value', name:'指数\n(基期=100)', nameTextStyle:{ color:'#6b7a8d', fontSize:11, align:'left' }, axisLabel:{ color:'#6b7a8d', fontSize:11 }, axisLine:{ show:false }, axisTick:{ show:false }, splitLine:{ lineStyle:{ color:'#eef0f5' } } },
+    dataZoom: [ { type:'inside', start:0, end:100 }, { type:'slider', bottom:8, height:22, borderColor:'#d5dbe5', backgroundColor:'#eef0f5', fillerColor:'rgba(47,128,237,.15)', handleStyle:{ color:'#2f80ed' } } ],
+    series
+  };
+}
+
+chart.setOption(buildNormOption());
+window.addEventListener('resize', () => chart.resize());
+
+// 显隐勾选框
+const legendBox = document.getElementById('legendBox');
+normDefs.forEach(d => {
+  const label = document.createElement('label');
+  label.style.cssText = 'display:inline-flex;align-items:center;font-size:13px;color:#4a5568;cursor:pointer;';
+  const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=selectedState[d.name]; cb.style.cssText='margin-right:4px;cursor:pointer;';
+  // 图例标记：与图中一致——实线/虚线 + 中间圆点，颜色随指标
+  const mk = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  mk.setAttribute('width', '22'); mk.setAttribute('height', '12');
+  mk.style.cssText = 'margin-right:5px;vertical-align:middle;flex:none;';
+  const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  ln.setAttribute('x1', '1'); ln.setAttribute('y1', '6');
+  ln.setAttribute('x2', '21'); ln.setAttribute('y2', '6');
+  ln.setAttribute('stroke', d.color); ln.setAttribute('stroke-width', '2');
+  if (d.dashed) ln.setAttribute('stroke-dasharray', '4 3');
+  const pt = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  pt.setAttribute('cx', '11'); pt.setAttribute('cy', '6');
+  pt.setAttribute('r', '3'); pt.setAttribute('fill', d.color);
+  mk.appendChild(ln); mk.appendChild(pt);
+  label.appendChild(cb); label.appendChild(mk); label.appendChild(document.createTextNode(d.name));
+  legendBox.appendChild(label);
+  cb.onchange = () => { selectedState[d.name] = cb.checked; chart.setOption({ legend: { selected: selectedState } }); };
+});
+
+// 动态演示
+let playTimer = null, frame = 0;
+function seriesAtDate(limitDate) {
+  return normDefs.map(d => {
+    const base = baseValue(d.baseRef || d.data, BASE_DATE);
+    const sliced = d.data.filter(p => p[0] <= limitDate);
+    const data = sliced.map(p => ({ value: [p[0], +(p[1]/base*100).toFixed(2)], raw: p[1], base }));
+    return normLine({ name:d.name, data, lineStyle:{ width:2.2, color:d.color, type:d.dashed?'dashed':'solid' }, itemStyle:{ color:d.color } });
+  });
+}
+const btnPlay = document.getElementById('btnPlay');
+btnPlay.onclick = function () {
+  if (playTimer) { clearInterval(playTimer); playTimer=null; this.textContent='▶ 动态演示'; chart.setOption(buildNormOption(), true); return; }
+  frame = 0; this.textContent = '⏸ 停止';
+  chart.setOption({ series: seriesAtDate(masterDates[0]) });
+  playTimer = setInterval(() => {
+    frame++;
+    if (frame >= masterDates.length) { clearInterval(playTimer); playTimer=null; btnPlay.textContent='▶ 动态演示'; chart.setOption(buildNormOption(), true); return; }
+    chart.setOption({ series: seriesAtDate(masterDates[frame]) });
+  }, 120);
+};
+</script>
+</body>
+</html>

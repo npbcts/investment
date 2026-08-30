@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>核电上市公司核心指标走势</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 24px; color: #1f2d3d; margin: 0 0 4px; }
+  .sub { color: #6b7a8d; font-size: 14px; margin-bottom: 28px; }
+  .card {
+    display: block; background: #fff; border-radius: 10px; padding: 24px 28px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.08); margin-bottom: 16px; text-decoration: none;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); transform: translateY(-2px); }
+  .card h2 { font-size: 18px; color: #2f80ed; margin: 0 0 6px; }
+  .card p { font-size: 13px; color: #6b7a8d; margin: 0; line-height: 1.6; }
+  .tag { display:inline-block; font-size:12px; color:#fff; background:#2f80ed; border-radius:3px; padding:1px 8px; margin-right:8px; vertical-align:1px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>核电上市公司核心指标走势</h1>
+  <div class="sub">反应堆规模 · 总市值 · 估值 · 分红 —— 归一化指数交互图（ECharts）</div>
+
+  <a class="card" href="cgn.html">
+    <h2><span class="tag">003816</span>中国广核</h2>
+    <p>2019 年上市以来核心指标走势：在运/在建机组、装机容量（万千瓦）、总市值、还原分红市值、估值密度、地板/天花板估值、市盈率、市净率、分红。</p>
+  </a>
+
+  <a class="card" href="cnnp.html">
+    <h2><span class="tag">601985</span>中国核电</h2>
+    <p>2015 年上市以来核心指标走势：在运/在建机组、装机容量（万千瓦）、总市值、还原分红市值、估值密度、地板/天花板估值、市盈率、市净率、分红。</p>
+  </a>
+
+  <p class="sub" style="margin-top:28px; font-size:12px; color:#8a94a6;">
+    数据说明：财务/行情数据来自腾讯行情、东方财富公开接口；反应堆规模为基于公开披露信息的整理/估算值。
+    原始数据可下载：<a href="cgn_data.csv">广核 CSV</a> · <a href="cnnp_data.csv">核电 CSV</a>。
+  </p>
+</div>
+</body>
+</html>
