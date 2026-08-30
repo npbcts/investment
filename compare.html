@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>横向比较 —— 跨公司同指标对比</title>
-<script src="assets/echarts.min.js"></script>
+<script src="js/echarts.min.js"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px 40px; }
@@ -208,7 +208,7 @@ function buildCompanyPanel() {
 }
 
 // 加载数据
-fetch('companies_data.json')
+fetch('data/companies_data.json')
   .then(r => r.json())
   .then(d => {
     DATA = d;
