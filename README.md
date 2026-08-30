@@ -16,15 +16,17 @@ deploy/
 ├── js/chart.js            ← 共用渲染逻辑（核电/装机容量/纯财务 三种模式）
 │
 └── data/                  ← 数据与页面分离
-    ├── <代码>.json          每家公司独立数据（财务 + 经营规模）
-    ├── companies_data.json  聚合数据（横向比较页用）
+    ├── <代码>.js            每家公司独立数据（带中文字段注释，可手动编辑）
+    ├── companies_data.js   聚合数据（横向比较页用）
     └── raw/                 原始数据归档（csv/md/json）
 ```
 
 ### 数据与页面分离
 
-- 每个公司的完整数据独立存放在 `data/<代码>.json`
-- 页面 HTML 只是极简壳（约 0.8KB），通过 `fetch` 加载对应数据后由 `js/chart.js` 渲染
+- 每个公司的完整数据独立存放在 `data/<代码>.js`（JS 对象字面量，非 JSON）
+- 数据文件顶部有**中文字段说明注释**，便于人工阅读与修改（改完刷新页面即生效）
+- 页面 HTML 只是极简壳（约 0.85KB），用 `<script src="data/<代码>.js">` 加载数据后由 `js/chart.js` 渲染
+- 用 script 加载（而非 fetch）是因为 **file:// 本地打开时 fetch 会被浏览器 CORS 禁止**，script 加载则可用
 - 更新数据无需改动页面，重跑 `scripts/build_data.py` 即可
 
 ### 共用元素
