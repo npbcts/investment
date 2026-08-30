@@ -12,6 +12,12 @@
   h2 { font-size: 16px; color: #1f2d3d; margin: 28px 0 12px; border-left: 4px solid #2f80ed; padding-left: 10px; }
   .count { font-size: 12px; color: #8a94a6; font-weight: normal; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .compare-link {
+    display:block; background:#2f80ed; color:#fff; border-radius:8px; padding:14px 18px;
+    text-decoration:none; font-size:15px; margin:16px 0 4px; box-shadow:0 2px 8px rgba(47,128,237,.25);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .compare-link:hover { transform: translateY(-2px); box-shadow:0 4px 14px rgba(47,128,237,.35); }
   .card {
     display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 8px;
     padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); text-decoration: none;
@@ -31,7 +37,9 @@
   <div class="sub">总市值 · 还原分红市值 · 市盈率 · 市净率 · 分红 · 装机容量 —— 归一化指数交互图（ECharts）</div>
   <div class="legend">★ = 已补充装机容量（万千瓦）经营规模指标的企业</div>
 
-  
+  <a class="compare-link" href="compare.html">📊 横向比较 —— 跨公司同指标对比</a>
+
+
   <h2>核电</h2>
   <div class="grid">
     <a class="card" href="cgn.html"><span class="tag">003816</span>中国广核</a>

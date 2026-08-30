@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>横向比较 —— 跨公司同指标对比</title>
+<script src="assets/echarts.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px 40px; }
+  .back { display:inline-block; font-size:13px; color:#2f80ed; text-decoration:none; margin-bottom:12px; }
+  .back:hover { text-decoration:underline; }
+  h1 { font-size: 20px; color: #1f2d3d; margin: 0 0 4px; }
+  .sub { color: #6b7a8d; font-size: 13px; margin-bottom: 14px; }
+  .toolbar { background:#fff; border-radius:8px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:14px; }
+  .row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:10px; }
+  .row:last-child { margin-bottom:0; }
+  .label { font-size:13px; color:#4a5568; white-space:nowrap; }
+  .btn {
+    border:1px solid #c8ced8; background:#fff; color:#4a5568; padding:5px 12px;
+    font-size:13px; cursor:pointer; border-radius:4px; transition: all .12s;
+  }
+  .btn:hover { border-color:#2f80ed; color:#2f80ed; }
+  .btn.active { background:#2f80ed; border-color:#2f80ed; color:#fff; }
+  .company-panel { background:#fff; border-radius:8px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:14px; }
+  .type-title { font-size:13px; font-weight:600; color:#1f2d3d; margin:8px 0 6px; }
+  .type-title .cnt { font-weight:normal; color:#8a94a6; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip {
+    display:inline-flex; align-items:center; gap:5px; background:#f0f2f5; border:1px solid transparent;
+    border-radius:4px; padding:4px 9px; font-size:12px; color:#4a5568; cursor:pointer; user-select:none;
+  }
+  .chip:hover { border-color:#c8ced8; }
+  .chip.on { background:#e8f0fe; border-color:#2f80ed; color:#2f80ed; }
+  .chip .ck { accent-color:#2f80ed; }
+  .chip.cap { border-left:2px solid #27ae60; }
+  #chart { width:100%; height:620px; background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .note { margin-top:14px; color:#8a94a6; font-size:12px; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 返回主页</a>
+  <h1>横向比较 —— 跨公司同指标对比</h1>
+  <div class="sub">勾选公司、选择指标，在同一图中对比走势。默认指标为「市值(分红前)」，默认归一化指数（各公司基期=100）。</div>
+
+  <div class="toolbar">
+    <div class="row">
+      <span class="label">指标：</span>
+      <button class="btn metric active" data-m="mcRestored">市值(分红前)</button>
+      <button class="btn metric" data-m="marketCap">总市值</button>
+      <button class="btn metric" data-m="pe">市盈率 PE</button>
+      <button class="btn metric" data-m="pb">市净率 PB</button>
+      <button class="btn metric" data-m="dividendPerShare">每股股利</button>
+      <button class="btn metric" data-m="capacity">装机容量(万千瓦)</button>
+    </div>
+    <div class="row">
+      <span class="label">显示：</span>
+      <button class="btn mode active" data-mode="index">归一化指数（基期=100）</button>
+      <button class="btn mode" data-mode="abs">绝对值</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="selectAll">全选</button>
+      <button class="btn" id="clearAll">清空</button>
+    </div>
+  </div>
+
+  <div class="company-panel" id="companyPanel"></div>
+
+  <div id="chart"></div>
+  <div class="note" id="noteBox"></div>
+</div>
+
+<script>
+const chart = echarts.init(document.getElementById('chart'));
+let DATA = null;          // 全部公司数据
+let selected = new Set(); // 选中公司代码
+let curMetric = 'mcRestored';
+let curMode = 'index';    // index | abs
+
+const METRICS = {
+  mcRestored:      { label: '市值(分红前)', unit: '亿元' },
+  marketCap:       { label: '总市值',      unit: '亿元' },
+  pe:              { label: '市盈率PE',    unit: '倍' },
+  pb:              { label: '市净率PB',    unit: '倍' },
+  dividendPerShare:{ label: '每股股利',    unit: '元' },
+  capacity:        { label: '装机容量',    unit: '万千瓦' },
+};
+const TYPE_ORDER = ['核电', '水电', '火电', '风光电', '其他'];
+
+// 30+ 色调色板
+const PALETTE = [
+  '#e74c3c','#2f80ed','#27ae60','#9b59b6','#e67e22','#f39c12','#1abc9c','#3498db',
+  '#e84393','#16a085','#d35400','#8e44ad','#2c3e50','#c0392b','#00acc1','#f1c40f',
+  '#5d6d7e','#a93226','#7d3c98','#117a65','#b7950b','#1a5276','#922b21','#0e6655',
+  '#6c3483','#a04000','#148f77','#2471a3','#b03a2e','#1e8449',
+];
+
+function fmt(v) {
+  return Number.isFinite(v) ? v.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : String(v);
+}
+
+// 取某指标序列首个非 null 值作为基期
+function baseValue(arr) {
+  for (const p of arr) { if (p[1] !== null && p[1] !== undefined) return p[1]; }
+  return 1;
+}
+
+function render() {
+  const companies = DATA.companies.filter(c => selected.has(c.code));
+  const series = companies.map((c, i) => {
+    const raw = c[curMetric] || [];
+    const color = PALETTE[i % PALETTE.length];
+    let data;
+    if (curMode === 'index') {
+      const base = baseValue(raw);
+      data = raw.map(p => [p[0], p[1] === null || p[1] === undefined ? null : +(p[1] / base * 100).toFixed(2)]);
+    } else {
+      data = raw.map(p => [p[0], p[1] === null || p[1] === undefined ? null : p[1]]);
+    }
+    return {
+      name: c.name, type: 'line', data,
+      showSymbol: false, smooth: true,
+      lineStyle: { width: 2, color }, itemStyle: { color },
+    };
+  });
+
+  const m = METRICS[curMetric];
+  const yName = curMode === 'index' ? '指数 (基期=100)' : `${m.label} (${m.unit})`;
+  chart.setOption({
+    color: PALETTE,
+    legend: { type: 'scroll', top: 2, left: 'center', textStyle: { color: '#4a5568', fontSize: 12 } },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(30,40,55,.92)', borderWidth: 0, textStyle: { color: '#fff', fontSize: 12 },
+      formatter: function (params) {
+        let s = '<b>' + params[0].axisValueLabel + '</b>';
+        params.forEach(it => {
+          if (it.value[1] === null) return;
+          s += '<br/>' + it.marker + it.seriesName + '：' + fmt(it.value[1]) +
+               (curMode === 'index' ? '　<span style="opacity:.65">(指数)</span>' : ' ' + m.unit);
+        });
+        return s;
+      }
+    },
+    grid: { left: 70, right: 40, top: 60, bottom: 70 },
+    xAxis: {
+      type: 'time', axisLine: { lineStyle: { color: '#c8ced8' } },
+      axisLabel: { color: '#6b7a8d', fontSize: 11 }, splitLine: { show: false },
+    },
+    yAxis: {
+      type: 'value', name: yName, scale: true,
+      nameTextStyle: { color: '#6b7a8d', fontSize: 11 },
+      axisLabel: { color: '#6b7a8d', fontSize: 11 }, splitLine: { lineStyle: { color: '#eef0f5' } },
+    },
+    dataZoom: [
+      { type: 'inside', start: 0, end: 100 },
+      { type: 'slider', bottom: 8, height: 20, borderColor: '#d5dbe5' },
+    ],
+    series,
+  });
+
+  // 说明
+  const n = series.length;
+  document.getElementById('noteBox').innerHTML =
+    `当前指标：<b>${m.label}</b>（${m.unit}），共 <b>${n}</b> 家公司。` +
+    (curMode === 'index'
+      ? `归一化指数：每家以自身该指标<b>首个披露值 = 100</b>，比较走势/涨跌，不反映绝对规模。`
+      : `绝对值：直接比较各公司该指标的量级（亿元/倍/元/万千瓦）。`) +
+    (curMetric === 'capacity'
+      ? ` 装机容量仅 11 家龙头有数据（基于公开披露信息的整理/估算值），其余公司无此指标。` : '');
+}
+
+function buildCompanyPanel() {
+  const panel = document.getElementById('companyPanel');
+  panel.innerHTML = '';
+  const byType = {};
+  for (const c of DATA.companies) {
+    (byType[c.type] = byType[c.type] || []).push(c);
+  }
+  for (const t of TYPE_ORDER) {
+    const list = byType[t];
+    if (!list || !list.length) continue;
+    const title = document.createElement('div');
+    title.className = 'type-title';
+    title.innerHTML = `${t} <span class="cnt">(${list.length} 家)</span>`;
+    panel.appendChild(title);
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    for (const c of list) {
+      const label = document.createElement('label');
+      label.className = 'chip' + (c.capacity ? ' cap' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.className = 'ck'; cb.checked = selected.has(c.code);
+      cb.onchange = () => {
+        if (cb.checked) selected.add(c.code); else selected.delete(c.code);
+        label.classList.toggle('on', cb.checked);
+        render();
+      };
+      const nm = document.createElement('span');
+      nm.textContent = c.name + (c.capacity ? ' ★' : '');
+      label.appendChild(cb); label.appendChild(nm);
+      label.onclick = (e) => { if (e.target !== cb) cb.click(); };
+      if (cb.checked) label.classList.add('on');
+      chips.appendChild(label);
+    }
+    panel.appendChild(chips);
+  }
+}
+
+// 加载数据
+fetch('companies_data.json')
+  .then(r => r.json())
+  .then(d => {
+    DATA = d;
+    // 默认选中：核电 2 家 + 有装机容量的 11 家
+    for (const c of d.companies) {
+      if (c.type === '核电' || c.capacity) selected.add(c.code);
+    }
+    buildCompanyPanel();
+    render();
+  })
+  .catch(e => {
+    document.getElementById('noteBox').textContent = '数据加载失败：' + e.message;
+  });
+
+// 指标切换
+document.querySelectorAll('.metric').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.metric').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    curMetric = btn.dataset.m;
+    // 装机容量默认切绝对值
+    if (curMetric === 'capacity' && curMode === 'index') {
+      curMode = 'abs';
+      document.querySelectorAll('.mode').forEach(b => b.classList.toggle('active', b.dataset.mode === 'abs'));
+    }
+    render();
+  };
+});
+
+// 模式切换
+document.querySelectorAll('.mode').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.mode').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    curMode = btn.dataset.mode;
+    render();
+  };
+});
+
+document.getElementById('selectAll').onclick = () => {
+  DATA.companies.forEach(c => selected.add(c.code));
+  buildCompanyPanel(); render();
+};
+document.getElementById('clearAll').onclick = () => {
+  selected.clear(); buildCompanyPanel(); render();
+};
+
+window.addEventListener('resize', () => chart.resize());
+</script>
+</body>
+</html>
