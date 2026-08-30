@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>横向比较 —— 跨公司同指标对比</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="js/echarts.min.js"></script>
 <script src="data/companies_data.js"></script>
 <style>
@@ -107,16 +108,25 @@ function baseValue(arr) {
 }
 
 function render() {
-  const companies = DATA.companies.filter(c => selected.has(c.code));
+  // 过滤：仅保留已勾选 且 该指标有数据 的公司
+  const companies = DATA.companies.filter(
+    c => selected.has(c.code) && Array.isArray(c[curMetric]) && c[curMetric].length > 0
+  );
   const series = companies.map((c, i) => {
     const raw = c[curMetric] || [];
     const color = PALETTE[i % PALETTE.length];
     let data;
     if (curMode === 'index') {
       const base = baseValue(raw);
-      data = raw.map(p => [p[0], p[1] === null || p[1] === undefined ? null : +(p[1] / base * 100).toFixed(2)]);
+      data = raw.map(p => ({
+        value: [p[0], p[1] === null || p[1] === undefined ? null : +(p[1] / base * 100).toFixed(2)],
+        raw: p[1],
+      }));
     } else {
-      data = raw.map(p => [p[0], p[1] === null || p[1] === undefined ? null : p[1]]);
+      data = raw.map(p => ({
+        value: [p[0], p[1] === null || p[1] === undefined ? null : p[1]],
+        raw: p[1],
+      }));
     }
     return {
       name: c.name, type: 'line', data,
@@ -136,9 +146,15 @@ function render() {
       formatter: function (params) {
         let s = '<b>' + params[0].axisValueLabel + '</b>';
         params.forEach(it => {
-          if (it.value[1] === null) return;
-          s += '<br/>' + it.marker + it.seriesName + '：' + fmt(it.value[1]) +
-               (curMode === 'index' ? '　<span style="opacity:.65">(指数)</span>' : ' ' + m.unit);
+          if (it.value[1] === null || it.value[1] === undefined) return;
+          const raw = it.data && it.data.raw;
+          if (curMode === 'index') {
+            // 归一化模式：同时展示指数 + 数据原值
+            s += '<br/>' + it.marker + it.seriesName + '：指数 ' + fmt(it.value[1]) +
+                 (raw !== null && raw !== undefined ? '　<span style="opacity:.8">原值 ' + fmt(raw) + ' ' + m.unit + '</span>' : '');
+          } else {
+            s += '<br/>' + it.marker + it.seriesName + '：' + fmt(it.value[1]) + ' ' + m.unit;
+          }
         });
         return s;
       }
@@ -158,7 +174,7 @@ function render() {
       { type: 'slider', bottom: 8, height: 20, borderColor: '#d5dbe5' },
     ],
     series,
-  });
+  }, true);  // notMerge=true：完全替换，避免切换指标/公司时旧系列残留
 
   // 说明
   const n = series.length;
