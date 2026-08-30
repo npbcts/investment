@@ -8,24 +8,24 @@
 <style>
   html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; }
-  .back {{ display:inline-block; font-size:13px; color:#2f80ed; text-decoration:none; margin-bottom:12px; }}
-  .back:hover {{ text-decoration:underline; }}
+  .back { display:inline-block; font-size:13px; color:#2f80ed; text-decoration:none; margin-bottom:12px; }
+  .back:hover { text-decoration:underline; }
 
   h1 { font-size: 20px; color: #1f2d3d; margin: 0 0 4px; }
   .sub { color: #6b7a8d; font-size: 13px; margin-bottom: 12px; }
-  .switcher { margin-bottom: 12px; }
-  .switcher button { border:1px solid #c8ced8; background:#fff; color:#4a5568; padding:6px 14px; font-size:13px; cursor:pointer; margin-right:8px; border-radius:4px; }
-  .switcher button.active { background:#2f80ed; border-color:#2f80ed; color:#fff; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .topbar .back { margin-bottom:0; }
+  .topbar button { border:1px solid #c8ced8; background:#fff; color:#4a5568; padding:6px 14px; font-size:13px; cursor:pointer; margin-right:8px; border-radius:4px; }
+  .topbar button.active { background:#2f80ed; border-color:#2f80ed; color:#fff; }
   #chart { width:100%; height:720px; background:#fff; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.08); }
   .note { margin-top:16px; color:#8a94a6; font-size:12px; line-height:1.7; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="../index.html">← 返回主页</a>
+  <div class="topbar"><a class="back" href="../index.html">← 返回主页</a><button id="btnPlay">▶ 动态演示</button></div>
   <h1>银星能源（000862）核心指标走势</h1>
   <div class="sub">市值 · 市盈率 · 市净率 · 分红 —— 鼠标悬停查看数值，底部滑块缩放时间轴</div>
-  <div class="switcher"><button id="btnPlay">▶ 动态演示</button></div>
   <div id="legendBox" style="display:flex;flex-wrap:wrap;gap:2px 16px;margin-bottom:12px;"></div>
   <div id="chart"></div>
   <div class="note" id="noteBox">说明：① 归一化指数视图以 <b>1998-09-30</b> 为统一基期（=100），各指标同轴对比，上方勾选框可控制显隐；② 财务交易指标（总市值、市盈率、市净率）为季度频率，数据来自腾讯行情/东方财富：总市值=季度末收盘价×总股本，市净率=收盘价÷每股净资产，市盈率=收盘价÷滚动12个月EPS(TTM)；③ 「还原分红市值」（深蓝虚线）= 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算），反映若不除息的股东总回报；</div>
@@ -421,8 +421,9 @@ const normDefs = [
   { name: '每股股利', data: dividendPerShare, color: colors[4] },
 ];
 
+const DEFAULT_ON = new Set(['总市值', '还原分红市值']);
 const selectedState = {};
-normDefs.forEach(d => { selectedState[d.name] = true; });
+normDefs.forEach(d => { selectedState[d.name] = DEFAULT_ON.has(d.name); });
 
 const masterDates = [...new Set(normDefs.flatMap(d => d.data.map(p => p[0])))].sort();
 const timeMin = masterDates[0], timeMax = masterDates[masterDates.length - 1];
@@ -461,7 +462,7 @@ const legendBox = document.getElementById('legendBox');
 normDefs.forEach(d => {
   const label = document.createElement('label');
   label.style.cssText = 'display:inline-flex;align-items:center;font-size:13px;color:#4a5568;cursor:pointer;';
-  const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.style.cssText='margin-right:4px;cursor:pointer;';
+  const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=selectedState[d.name]; cb.style.cssText='margin-right:4px;cursor:pointer;';
   // 图例标记：与图中一致——实线/虚线 + 中间圆点，颜色随指标
   const mk = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   mk.setAttribute('width', '22'); mk.setAttribute('height', '12');
