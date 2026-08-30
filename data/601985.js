@@ -731,6 +731,8 @@ window.COMPANY_DATA = {
       12.0
     ]
   ],
+  "gwPerOp": 95.0,
+  "gwPerUc": 115.0,
   "mcRestored": [
     [
       "2015-06-30",

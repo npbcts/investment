@@ -55,6 +55,8 @@
       <button class="btn metric" data-m="pb">市净率 PB</button>
       <button class="btn metric" data-m="dividendPerShare">每股股利</button>
       <button class="btn metric" data-m="capacity">装机容量(万千瓦)</button>
+      <button class="btn metric" data-m="mcPerOpGW">市值/在运万千瓦</button>
+      <button class="btn metric" data-m="mcPerTotalGW">市值/总规模万千瓦</button>
     </div>
     <div class="row">
       <span class="label">显示：</span>
@@ -86,6 +88,8 @@ const METRICS = {
   pb:              { label: '市净率PB',    unit: '倍' },
   dividendPerShare:{ label: '每股股利',    unit: '元' },
   capacity:        { label: '装机容量',    unit: '万千瓦' },
+  mcPerOpGW:       { label: '市值/在运万千瓦', unit: '亿元/万千瓦' },
+  mcPerTotalGW:    { label: '市值/总规模万千瓦', unit: '亿元/万千瓦' },
 };
 const TYPE_ORDER = ['核电', '水电', '火电', '风光电', '其他'];
 
@@ -105,6 +109,61 @@ function fmt(v) {
 function baseValue(arr) {
   for (const p of arr) { if (p[1] !== null && p[1] !== undefined) return p[1]; }
   return 1;
+}
+
+// 前向填充取某日期对应的规模值
+function ffillAt(date, arr) {
+  let last = null;
+  for (const [d, v] of arr) { if (d <= date) last = v; else break; }
+  return last;
+}
+
+// 计算 mc/规模 比值序列（规模前向填充）
+function computeRatio(mcArr, scaleArr) {
+  if (!mcArr || !scaleArr || !scaleArr.length) return null;
+  const out = [];
+  let gi = 0, lastScale = null;
+  for (const [d, mc] of mcArr) {
+    while (gi < scaleArr.length && scaleArr[gi][0] <= d) { lastScale = scaleArr[gi][1]; gi++; }
+    if (lastScale && mc !== null && mc !== undefined) out.push([d, +(mc / lastScale).toFixed(3)]);
+    else out.push([d, null]);
+  }
+  return out;
+}
+
+// 核电总规模（在运+在建）万千瓦序列
+function computeTotalGW(c) {
+  const a = (c.reactor || []).map(([d, n]) => [d, n * c.gwPerOp]);
+  const b = (c.underConstruction || []).map(([d, n]) => [d, n * c.gwPerUc]);
+  const am = new Map(a), bm = new Map(b);
+  const dates = [...new Set([...am.keys(), ...bm.keys()])].sort();
+  const out = [];
+  let la = null, lb = null;
+  for (const d of dates) {
+    if (am.has(d)) la = am.get(d);
+    if (bm.has(d)) lb = bm.get(d);
+    if (la !== null && lb !== null) out.push([d, +(la + lb).toFixed(1)]);
+  }
+  return out;
+}
+
+// 计算派生估值密度指标（市值/在运万千瓦、市值/总规模万千瓦）
+function computeDensityMetrics(c) {
+  const mc = c.mcRestored || c.marketCap || [];
+  // 市值/在运万千瓦
+  if (c.gwPerOp && c.reactor && c.reactor.length) {
+    const reactorGW = c.reactor.map(([d, n]) => [d, n * c.gwPerOp]);
+    c.mcPerOpGW = computeRatio(mc, reactorGW);
+  } else if (c.capacity && c.capacity.length) {
+    c.mcPerOpGW = computeRatio(mc, c.capacity);
+  }
+  // 市值/总规模万千瓦
+  if (c.gwPerOp && c.gwPerUc && c.reactor && c.underConstruction) {
+    c.mcPerTotalGW = computeRatio(mc, computeTotalGW(c));
+  } else if (c.capacity && c.capacity.length) {
+    // 无在建数据，以装机容量近似（说明里标注）
+    c.mcPerTotalGW = computeRatio(mc, c.capacity);
+  }
 }
 
 function render() {
@@ -184,7 +243,11 @@ function render() {
       ? `归一化指数：每家以自身该指标<b>首个披露值 = 100</b>，比较走势/涨跌，不反映绝对规模。`
       : `绝对值：直接比较各公司该指标的量级（亿元/倍/元/万千瓦）。`) +
     (curMetric === 'capacity'
-      ? ` 装机容量仅 11 家龙头有数据（基于公开披露信息的整理/估算值），其余公司无此指标。` : '');
+      ? ` 装机容量仅 11 家龙头有数据（基于公开披露信息的整理/估算值），其余公司无此指标。` : '') +
+    (curMetric === 'mcPerOpGW'
+      ? ` 口径：市值(分红前) ÷ 在运装机万千瓦（核电按机组数×平均单机容量，发电企业按装机容量近似）。` : '') +
+    (curMetric === 'mcPerTotalGW'
+      ? ` 口径：市值(分红前) ÷ 总规模万千瓦（核电=在运+在建；发电企业无在建数据、以装机容量近似）。` : '');
 }
 
 function buildCompanyPanel() {
@@ -230,6 +293,10 @@ if (!d || !d.companies) {
   document.getElementById('noteBox').textContent = '数据加载失败：未找到 window.ALL_COMPANIES_DATA';
 } else {
   DATA = d;
+  // 为每家公司计算派生估值密度指标（市值/在运万千瓦、市值/总规模万千瓦）
+  for (const c of d.companies) {
+    computeDensityMetrics(c);
+  }
   // 默认选中：核电 2 家 + 有装机容量的 11 家
   for (const c of d.companies) {
     if (c.type === '核电' || c.capacity) selected.add(c.code);
