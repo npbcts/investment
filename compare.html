@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>横向比较 —— 跨公司同指标对比</title>
 <script src="js/echarts.min.js"></script>
+<script src="data/companies_data.js"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px 40px; }
@@ -207,21 +208,19 @@ function buildCompanyPanel() {
   }
 }
 
-// 加载数据
-fetch('data/companies_data.json')
-  .then(r => r.json())
-  .then(d => {
-    DATA = d;
-    // 默认选中：核电 2 家 + 有装机容量的 11 家
-    for (const c of d.companies) {
-      if (c.type === '核电' || c.capacity) selected.add(c.code);
-    }
-    buildCompanyPanel();
-    render();
-  })
-  .catch(e => {
-    document.getElementById('noteBox').textContent = '数据加载失败：' + e.message;
-  });
+// 加载数据（通过 <script src="data/companies_data.js"> 注入 window.ALL_COMPANIES_DATA）
+const d = window.ALL_COMPANIES_DATA;
+if (!d || !d.companies) {
+  document.getElementById('noteBox').textContent = '数据加载失败：未找到 window.ALL_COMPANIES_DATA';
+} else {
+  DATA = d;
+  // 默认选中：核电 2 家 + 有装机容量的 11 家
+  for (const c of d.companies) {
+    if (c.type === '核电' || c.capacity) selected.add(c.code);
+  }
+  buildCompanyPanel();
+  render();
+}
 
 // 指标切换
 document.querySelectorAll('.metric').forEach(btn => {

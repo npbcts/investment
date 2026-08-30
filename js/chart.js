@@ -43,14 +43,16 @@ function normLine(extra) {
 }
 
 // ============ 主入口 ============
-function loadChart(dataUrl) {
-  fetch(dataUrl)
-    .then(r => { if (!r.ok) throw new Error('数据加载失败: ' + r.status); return r.json(); })
-    .then(data => renderChart(data))
-    .catch(e => {
-      document.getElementById('chartTitle').textContent = '加载失败';
-      document.getElementById('chartNote').textContent = e.message;
-    });
+// 数据通过 <script src="data/<code>.js"> 加载到 window.COMPANY_DATA，
+// 此处直接读取（file:// 与 http:// 均可用，不依赖 fetch）。
+function loadChart() {
+  const data = window.COMPANY_DATA;
+  if (!data || !data.marketCap) {
+    document.getElementById('chartTitle').textContent = '数据加载失败';
+    document.getElementById('chartNote').textContent = '未找到 window.COMPANY_DATA，请确认 data/<代码>.js 已正确加载。';
+    return;
+  }
+  renderChart(data);
 }
 
 function renderChart(data) {
