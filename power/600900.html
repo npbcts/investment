@@ -8,6 +8,8 @@
 <style>
   html, body { margin: 0; padding: 0; background: #f5f6fa; font-family: "Microsoft YaHei","PingFang SC",sans-serif; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; }
+  .back { display:inline-block; font-size:13px; color:#2f80ed; text-decoration:none; margin-bottom:12px; }
+  .back:hover { text-decoration:underline; }
   h1 { font-size: 20px; color: #1f2d3d; margin: 0 0 4px; }
   .sub { color: #6b7a8d; font-size: 13px; margin-bottom: 12px; }
   .switcher { margin-bottom: 12px; }
@@ -19,12 +21,13 @@
 </head>
 <body>
 <div class="wrap">
+  <a class="back" href="../index.html">← 返回主页</a>
   <h1>长江电力（600900）核心指标走势</h1>
-  <div class="sub">市值 · 市盈率 · 市净率 · 分红 —— 鼠标悬停查看数值，底部滑块缩放时间轴</div>
+  <div class="sub">市值 · 市盈率 · 市净率 · 分红 · 装机容量 —— 鼠标悬停查看数值，底部滑块缩放时间轴</div>
   <div class="switcher"><button id="btnPlay">▶ 动态演示</button></div>
   <div id="legendBox" style="display:flex;flex-wrap:wrap;gap:2px 16px;margin-bottom:12px;"></div>
   <div id="chart"></div>
-  <div class="note" id="noteBox">说明：① 归一化指数视图以 <b>2003-12-31</b> 为统一基期（=100），各指标同轴对比，上方勾选框可控制显隐；② 财务交易指标（总市值、市盈率、市净率）为季度频率，数据来自腾讯行情/东方财富：总市值=季度末收盘价×总股本，市净率=收盘价÷每股净资产，市盈率=收盘价÷滚动12个月EPS(TTM)；③ 「还原分红市值」（深蓝虚线）= 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算），反映若不除息的股东总回报；</div>
+  <div class="note" id="noteBox">说明：① 归一化指数视图以 <b>2003-12-31</b> 为统一基期（=100），各指标同轴对比，上方勾选框可控制显隐；② 财务交易指标（总市值、市盈率、市净率）为季度频率，数据来自腾讯行情/东方财富：总市值=季度末收盘价×总股本，市净率=收盘价÷每股净资产，市盈率=收盘价÷滚动12个月EPS(TTM)；③ 「还原分红市值」（深蓝虚线）= 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算），反映若不除息的股东总回报；④ 装机容量（万千瓦）为<b>基于公开披露信息的整理/估算值</b>（年末口径），逐年精确值需核实；⑤ 估值密度指标（基于分红前估值，平均=近4季滚动平均）：「市值/装机万千瓦」=单千瓦装机对应估值；「平均市值/装机万千瓦」=近4季平均分红前估值÷装机容量；「地板估值」=历史最低「平均市值/装机」×装机容量，得保守下沿；「天花板估值」=历史最高该估值×装机容量，得乐观上沿（含 IPO 高溢价期），两者共同框定历史估值区间上下沿。</div>
 </div>
 
 <script>
@@ -339,8 +342,16 @@ const dividendPerShare = [
   ['2024-12-31', 0.943],
   ['2025-12-31', 1.0],
 ];
+const capacity = [
+  ['2019-12-31', 4550],
+  ['2020-12-31', 4550],
+  ['2021-12-31', 4550],
+  ['2022-12-31', 7169.5],
+  ['2023-12-31', 7169.5],
+  ['2024-12-31', 7169.5],
+  ['2025-12-31', 7170],
+];
 
-// 还原分红市值 = 总市值 + 截至当日累计已派发现金分红（末期按次年6月派发估算）
 const mcRestored = (function () {
   const events = dividendPerShare
     .map(p => ({ date: (Number(p[0].slice(0,4)) + 1) + '-06-30', total: p[1] * TOTAL_SHARES / 1e8 }))
@@ -353,6 +364,30 @@ const mcRestored = (function () {
 })();
 
 
+// 估值密度指标（基于分红前估值 mcRestored，平均 = 近4季滚动平均，装机容量万千瓦）
+function ffillAt(date, arr) {
+  let last = null;
+  for (const [d, v] of arr) { if (d <= date) last = v; else break; }
+  return last;
+}
+const mcRollAvg = mcRestored.map(([d, mc], i) => {
+  const w = mcRestored.slice(Math.max(0, i - 3), i + 1);
+  return [d, +(w.reduce((s, p) => s + p[1], 0) / w.length).toFixed(2)];
+});
+// 市值/装机万千瓦（亿元/万千瓦）
+const mcPerCapGW = mcRestored.map(([d, mc]) => { const g = ffillAt(d, capacity); return g ? [d, +(mc / g).toFixed(3)] : null; }).filter(Boolean);
+// 平均市值/装机万千瓦
+const avgPerCapGW = mcRollAvg.map(([d, mc]) => { const g = ffillAt(d, capacity); return g ? [d, +(mc / g).toFixed(3)] : null; }).filter(Boolean);
+// 地板估值 = 历史最低「平均市值/装机」× 装机容量
+const floorValuation = (function () {
+  const minRatio = Math.min(...avgPerCapGW.map(p => p[1]));
+  return mcRestored.map(([d]) => { const g = ffillAt(d, capacity); return g ? [d, +(minRatio * g).toFixed(2)] : null; }).filter(Boolean);
+})();
+// 天花板估值 = 历史最高「平均市值/装机」× 装机容量
+const ceilingValuation = (function () {
+  const maxRatio = Math.max(...avgPerCapGW.map(p => p[1]));
+  return mcRestored.map(([d]) => { const g = ffillAt(d, capacity); return g ? [d, +(maxRatio * g).toFixed(2)] : null; }).filter(Boolean);
+})();
 
 const colors = ["#e74c3c", "#2f80ed", "#9b59b6", "#27ae60", "#e67e22", "#f39c12", "#e84393", "#1a5276", "#00acc1", "#c0392b", "#6c3483", "#0e6655", "#b7950b", "#5d6d7e", "#d35400"];
 
@@ -367,8 +402,13 @@ function normLine(extra) {
 }
 
 const normDefs = [
+  { name: '装机容量(万千瓦)', data: capacity, color: colors[0] },
   { name: '总市值', data: marketCap, color: colors[1], baseRef: marketCap },
   { name: '还原分红市值', data: mcRestored, color: colors[7], dashed: true, baseRef: marketCap },
+  { name: '市值/装机万千瓦', data: mcPerCapGW, color: colors[11] },
+  { name: '地板估值(最低单千瓦×装机)', data: floorValuation, color: colors[12], dashed: true, baseRef: marketCap },
+  { name: '天花板估值(最高单千瓦×装机)', data: ceilingValuation, color: colors[14], dashed: true, baseRef: marketCap },
+  { name: '平均市值/装机万千瓦', data: avgPerCapGW, color: colors[13], dashed: true },
   { name: '市盈率PE', data: pe, color: colors[2] },
   { name: '市净率PB', data: pb, color: colors[3] },
   { name: '每股股利', data: dividendPerShare, color: colors[4] },
@@ -409,13 +449,11 @@ function buildNormOption() {
 chart.setOption(buildNormOption());
 window.addEventListener('resize', () => chart.resize());
 
-// 显隐勾选框
 const legendBox = document.getElementById('legendBox');
 normDefs.forEach(d => {
   const label = document.createElement('label');
   label.style.cssText = 'display:inline-flex;align-items:center;font-size:13px;color:#4a5568;cursor:pointer;';
   const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true; cb.style.cssText='margin-right:4px;cursor:pointer;';
-  // 图例标记：与图中一致——实线/虚线 + 中间圆点，颜色随指标
   const mk = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   mk.setAttribute('width', '22'); mk.setAttribute('height', '12');
   mk.style.cssText = 'margin-right:5px;vertical-align:middle;flex:none;';
@@ -433,7 +471,6 @@ normDefs.forEach(d => {
   cb.onchange = () => { selectedState[d.name] = cb.checked; chart.setOption({ legend: { selected: selectedState } }); };
 });
 
-// 动态演示
 let playTimer = null, frame = 0;
 function seriesAtDate(limitDate) {
   return normDefs.map(d => {
